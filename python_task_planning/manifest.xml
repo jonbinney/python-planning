@@ -1,0 +1,16 @@
+<package>
+  <description brief="hip">
+
+     hip
+
+  </description>
+  <author>Jon Binney</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hip</url>
+
+  <rosdep name="pygraphviz"/>
+
+</package>
+
+
