@@ -1,5 +1,5 @@
 <package>
-  <description brief="hip">
+  <description brief="python_task_planning">
 
      hip
 
@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hip</url>
 
-  <rosdep name="pygraphviz"/>
+  <rosdep name="python-pygraphviz"/>
 
 </package>
 

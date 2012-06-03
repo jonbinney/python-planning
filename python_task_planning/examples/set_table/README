@@ -1,0 +1,9 @@
+# set_table.py runs HPN on a simple domain described only by conjunction of fluents.
+# the optional argument to set_table.py is the filename where it should output a .dot graph
+# description which shows the hierarchy created by the planner
+roscd python_task_planning
+python examples/set_table/set_table.py graph.dot
+
+# to view the resulting graph, first convert it to a png file
+dot -Tpng -ograph.png graph.dot
+display graph.png

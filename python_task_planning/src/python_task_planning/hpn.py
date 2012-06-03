@@ -1,7 +1,7 @@
 import numpy as np
-from hierarchical_interactive_planning import AbstractionInfo, ConjunctionOfFluents, HPlanTree
-from hierarchical_interactive_planning.exceptions import PlanningFailedError
-from hierarchical_interactive_planning.a_star import a_star
+from python_task_planning import AbstractionInfo, ConjunctionOfFluents, HPlanTree
+from python_task_planning.exceptions import PlanningFailedError
+from python_task_planning.a_star import a_star
 
 def hpn(operators, current_state, goal, world, abs_info=None, maxdepth=np.inf, depth=0, tree=None):
     '''Implements HPN (Hierarchical Planning in the Now) algorithm of Kaelbing and Lozano-Perez.

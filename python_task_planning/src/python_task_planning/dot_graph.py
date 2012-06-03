@@ -1,4 +1,4 @@
-from hierarchical_interactive_planning import ConjunctionOfFluents, OperatorInstance
+from python_task_planning import ConjunctionOfFluents, OperatorInstance
 import pygraphviz as pgv
 
 lpk_style = dict(
