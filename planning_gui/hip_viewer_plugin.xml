@@ -1,0 +1,12 @@
+<library path="src/hip_viewer/hip_viewer_plugin">
+  <class name="hip_viewer_plugin" type="HipViewerPlugin" base_class_type="rosgui_rospy::Plugin">
+    <description>
+      A Python GUI plugin to interact with the HIP planner.
+    </description>
+    <rosguiplugin>
+      <label>HIP viewer</label>
+      <icon type="theme">preferences-system-network</icon>
+      <statustip>For interacting with the HIP planner.</statustip>
+    </rosguiplugin>
+  </class>
+</library>
