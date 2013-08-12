@@ -1,0 +1,15 @@
+<package>
+  <name>python_task_planning</name>
+  <description>python_task_planning</description>
+  <version>0.0.1</version>
+  <maintainer email="jbinney@willowgarage.com">Jon Binney</maintainer>
+  <license>BSD</license>
+  <url>http://ros.org/wiki/hip</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>python-pygraphviz</run_depend>
+
+</package>
+
+
