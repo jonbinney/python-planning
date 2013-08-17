@@ -1,5 +1,5 @@
-import roslib; roslib.load_manifest('hierarchical_interactive_planning')
-from hierarchical_interactive_planning import a_star
+#!/usr/bin/env python
+from python_task_planning import a_star
 
 import numpy as np
 from scipy import linalg
