@@ -1,0 +1,288 @@
+#!/usr/bin/env python
+import time
+import numpy as np
+from scipy import linalg
+from matplotlib import pyplot as plt
+
+class PrioritySet:
+    def __init__(self):
+        self._item_dict = {}
+
+    def push(self, item, key):
+        assert(item not in self._item_dict)
+        self._item_dict[item] = key
+
+    def pop(self):
+        min_item, min_key = self.min_item()
+        del self._item_dict[min_item]
+        return min_item
+
+    def min_item(self):
+        min_key = None
+        min_item = None
+        for item in self._item_dict:
+            key = self._item_dict[item]
+            if min_key is None or key < min_key:
+                min_key = key
+                min_item = item
+        return min_item, min_key
+
+    def remove(self, item):
+        del self._item_dict[item]
+
+    def contains(self, item):
+        return (item in self._item_dict)
+
+class SimpleProblem:
+    def __init__(self, states, actions_list):
+        # array of states. indices are the state ids
+        self._states = states
+
+        self._actions = {s:{} for s in range(len(self._states))}
+        self._actions_rev = {s:{} for s in range(len(self._states))}
+        for s_from, s_to, cost in actions_list:
+            self._actions[s_from][s_to] = cost
+            self._actions_rev[s_to][s_from] = cost
+
+        # set of actions whose costs have changed since problem creation
+        self._disabled_actions = {}
+        self._disabled_actions_rev = {}
+        self._changed_states = set()
+
+    def num_states(self):
+        return len(self._states)
+
+    def succs(self, s):
+        '''
+        Return dictionary whose keys are sucessor states and
+        values are costs.
+        '''
+        return self._actions[s]
+
+    def preds(self, s):
+        '''
+        Return dictionary whose keys are predeccessor states and
+        values are costs.
+        '''
+        return self._actions_rev[s]
+
+    def h(self, s1, s2):
+        return linalg.norm(self._states[s1] - self._states[s2])
+
+    def disable_state(self, s):
+        # mark this state and all neighbors as changed
+        self._changed_states.add(s)
+        self._changed_states.update(self._actions[s].keys())
+
+        # save the actions so we can restore them later
+        self._disabled_actions[s] = self._actions[s].copy()
+        self._disabled_actions_rev[s] = self._actions[s].copy()
+
+        # delete all actions to/from this state
+        self._actions[s] = {}
+        self._actions_rev[s] = {}
+
+    def get_changed_states(self):
+        return self._changed_states
+    
+class DStarLite:
+    '''
+    States are represented as python integers.
+    '''
+    def __init__(self, problem, s_start, s_goal):
+        self.problem = problem
+        self.s_start = s_start
+        self.s_goal = s_goal
+        
+        self.g = np.array([np.inf] * self.problem.num_states())
+        self.rhs = np.array([np.inf] * self.problem.num_states())
+        self.rhs[s_goal] = 0
+        
+        self.open = PrioritySet()
+        self.open.push(s_goal, self.key(s_goal))
+
+        # keeps track of how many vertices we've updated
+        self.num_updates = 0
+
+    def key(self, s):
+        ''' Calculate key for a state '''
+        return (min(self.g[s], self.rhs[s]) + self.problem.h(self.s_start, s),
+                min(self.g[s], self.rhs[s]))
+
+    def update_vertex(self, s):
+        self.num_updates += 1
+        
+        if s != self.s_goal:
+            succs = self.problem.succs(s)
+            self.rhs[s] = min([self.g[s_next] + succs[s_next] for s_next in succs])
+            
+        if self.open.contains(s):
+            self.open.remove(s)
+
+        if self.g[s] != self.rhs[s]:
+            self.open.push(s, self.key(s))
+
+    def compute_shortest_path(self):
+        while True:
+            min_item, min_key = self.open.min_item()
+            #print ''
+            #print 'Top: %d, %s' % (min_item, str(min_key))
+            #print '  g:', self.g
+            #print 'rhs:', self.rhs
+            #print self.open._item_dict
+
+            if (min_item is None) or (min_key >= self.key(self.s_start)) and (self.rhs[self.s_start] == self.g[self.s_start]):
+                break
+
+            k_old = min_key
+            u = self.open.pop()
+            # print 'Pop %d' % u
+            
+            if k_old < self.key(u):
+                # print '  Push u with updated key'
+                self.open.push(u, self.key(u))
+            elif self.g[u] > self.rhs[u]:
+                # print 'Update all preds'
+                self.g[u] = self.rhs[u]
+                for s_pred in self.problem.preds(u):
+                    self.update_vertex(s_pred)
+            else:
+                # print 'Update u and all preds'
+                self.g[u] = np.inf
+                for s_pred in self.problem.preds(u):
+                    self.update_vertex(s_pred)
+                self.update_vertex(u)
+
+    def update_start_state(self, s_start):
+        self.s_start = s_start
+
+        # update the keys for the open set (the hueristic
+        # has changed since the start state has changed)
+        for s in self.open._item_dict:
+            self.open._item_dict[s] = self.key(s)
+        
+        #self.update_vertex(s_start)
+        #self.update_vertex(s_goal)
+        #self.g[s_goal] = np.inf
+        
+        # should call update_vertex here on and vertices with changed edge costs
+
+def plot_g(points, g):
+    ''' Plot distance from goal/start using colors'''
+    expanded_states = ~(g == np.inf)
+
+    # plot the expanded states
+    plt.scatter(points[expanded_states][:,0], points[expanded_states][:,1], s=200, marker='o', cmap=plt.cm.jet,
+               c=g[expanded_states])
+
+    # plot the non-expanded states in black
+    plt.scatter(points[~expanded_states][:,0], points[~expanded_states][:,1], s=200, marker='o', cmap=plt.cm.jet,
+               c='black')
+
+    # write the state on each point
+    for s, x in enumerate(points):
+        plt.annotate('%d' % s, x, color='m')
+
+def random_graph_2d(n, conn_dist):
+    points = np.random.random((n, 2))
+    actions_list = []
+    for ii in range(len(points)):
+        for jj in range(len(points)):
+            d = linalg.norm(points[ii] - points[jj])
+            if d < conn_dist:
+                actions_list.append((ii, jj, d))
+    return points, actions_list
+
+def regular_graph_2d(n, dx, connectivity=4):
+    ''' Creates an n x n grid. '''
+    if connectivity == 4:
+        conn_dist = dx*1.01
+    elif connectivity == 8:
+        conn_dist = dx*1.5
+    else:
+        raise ValueError('Invalid value for connectivity parameter')
+    
+    points = []
+    for ii in range(n):
+        for jj in range(n):
+            points.append((ii*dx, jj*dx))
+    points = np.array(points)
+
+    actions_list = []
+    for ii in range(len(points)):
+        for jj in range(len(points)):
+            if ii == jj:
+                continue
+            d = linalg.norm(points[ii] - points[jj])
+            if d < dx * conn_dist:
+                actions_list.append((ii, jj, d))
+    return points, actions_list 
+   
+        
+n = 200
+conn_dist = 0.1
+
+#points, actions_list = random_graph_2d(n, conn_dist)
+points, actions_list = regular_graph_2d(int(n**0.5), 1.0, connectivity=8)
+
+s_start = 0
+s_goal = 195
+
+problem = SimpleProblem(points, actions_list)
+planner = DStarLite(problem, s_start, s_goal)
+while True:
+    print ''
+    print 'Planning'
+
+    t0 = time.time()
+    planner.num_updates = 0
+    planner.compute_shortest_path()
+    t1 = time.time()
+    print 'Updated  %d/%d vertices in %fs' % (planner.num_updates, len(points), t1-t0)
+
+    # plot connections in the graph
+    for s_from, s_to, cost in actions_list:
+        endpoints = np.array([points[s_from], points[s_to]])
+        plt.plot(endpoints[:,0], endpoints[:,1], c='b')
+    plt.plot([points[s_start][0]], [points[s_start][1]], 'rx', markersize=60)
+    plt.plot([points[s_goal][0]], [points[s_goal][1]], 'gx', markersize=60)
+    plot_g(points, planner.g)
+    plt.show()
+
+
+    # ask the user where to move
+    input_str = raw_input('Next state:')
+
+    toks = input_str.split()
+    if len(toks) == 0:
+        print 'Bad input'
+    elif toks[0] == 'q':
+        # quit
+        break
+    elif toks[0] == 'm':
+        # move to specified state
+        s_best = int(toks[1])
+        print 'Moving to %d' % s_best
+    elif toks[0] == 't':
+        print 'Toggling', toks[1:]
+        # Todo: toggle states (disable/enable actions
+
+    plt.cla()
+    
+
+    if 0:
+        # move to the best neighbor vertex
+        s_best, cost_best = None, np.inf
+        succs = problem.succs(s_start)
+        for s_next in succs:
+            cost_next = succs[s_next] + planner.g[s_next]
+            if cost_next  < cost_best:
+                cost_best = cost_next
+                s_best = s_next
+        if s_best is None:
+            raise ValueError('No valid move')
+
+    s_start = s_best
+    planner.update_start_state(s_start)
+
+
